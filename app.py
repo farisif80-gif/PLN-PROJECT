@@ -95,7 +95,7 @@ with col2:
 
 
 # ==========================================
-# LOGIKA MESIN OTOMASI
+# LOGIKA MESIN OTOMASI (SCANNER MATA ELANG)
 # ==========================================
 proses_btn = st.button("Proses Sinkronisasi Data")
 
@@ -109,13 +109,27 @@ if proses_btn:
                     try: return str(int(float(x)))
                     except: return str(x).strip()
                 
-                # FUNGSI PEMBACA MULTI-FORMAT (CSV/XLSX)
-                def read_data(uploaded_file, header_row):
+                # FUNGSI PEMBACA SMART (Nyari judul kolom otomatis)
+                def read_file_smart(uploaded_file):
+                    # Baca filenya polosan dulu tanpa ngatur header
                     if uploaded_file.name.lower().endswith('.csv'):
-                        # Pakai engine python biar deteksi titik koma atau koma jalan otomatis
-                        return pd.read_csv(uploaded_file, header=header_row, sep=None, engine='python')
+                        df = pd.read_csv(uploaded_file, sep=None, engine='python', header=None)
                     else:
-                        return pd.read_excel(uploaded_file, header=header_row)
+                        df = pd.read_excel(uploaded_file, header=None)
+                    
+                    # Scanning baris demi baris nyari yang ada tulisan 'ebib'
+                    header_idx = 0
+                    for i in range(min(15, len(df))): # Cek maksimal 15 baris pertama
+                        row_vals = df.iloc[i].astype(str).str.lower().tolist()
+                        if any('ebib' in str(v).strip() for v in row_vals):
+                            header_idx = i
+                            break
+                            
+                    # Tetapkan baris yang ketemu sebagai judul kolom resmi
+                    df.columns = df.iloc[header_idx]
+                    # Hapus baris judul dan baris sampah di atasnya
+                    df = df.iloc[header_idx+1:].reset_index(drop=True)
+                    return df
 
                 # --- 1. RADAR PINTAR (ANTI-ERROR NAMA KOLOM) ---
                 def clean_cols(df):
@@ -132,14 +146,14 @@ if proses_btn:
                             if kw in col: return col
                     raise KeyError(f"Waduh bray, kolom '{keywords[0]}' ga ketemu. Kolom yang ada di file lu: {list(df.columns)}")
 
-                # --- 2. BACA DATA MENTAH DENGAN MESIN PEMBACA BARU ---
-                df_active = clean_cols(read_data(file_active, header_row=0))
-                df_kcal = clean_cols(read_data(file_kcal, header_row=1))
-                df_time = clean_cols(read_data(file_time, header_row=1))
-                df_steps = clean_cols(read_data(file_steps, header_row=1))
-                df_league = clean_cols(read_data(file_league, header_row=1))
-                df_move = clean_cols(read_data(file_move, header_row=1))
-                df_recharger = clean_cols(read_data(file_recharger, header_row=1))
+                # --- 2. BACA DATA MENTAH (Sekarang gak butuh hardcode header_row lagi) ---
+                df_active = clean_cols(read_file_smart(file_active))
+                df_kcal = clean_cols(read_file_smart(file_kcal))
+                df_time = clean_cols(read_file_smart(file_time))
+                df_steps = clean_cols(read_file_smart(file_steps))
+                df_league = clean_cols(read_file_smart(file_league))
+                df_move = clean_cols(read_file_smart(file_move))
+                df_recharger = clean_cols(read_file_smart(file_recharger))
 
                 # Extract map
                 c_k_ebib = get_col(df_kcal, 'ebib')
