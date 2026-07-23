@@ -95,7 +95,7 @@ with col2:
 
 
 # ==========================================
-# LOGIKA MESIN OTOMASI (SCANNER MATA ELANG)
+# LOGIKA MESIN OTOMASI (SCANNER MATA ELANG + ANTI TYPO)
 # ==========================================
 proses_btn = st.button("Proses Sinkronisasi Data")
 
@@ -103,7 +103,7 @@ if proses_btn:
     if not all([master_file, file_active, file_kcal, file_time, file_steps, file_league, file_move, file_recharger]):
         st.error("Semua 8 file wajib diunggah sebelum memproses data.")
     else:
-        with st.spinner("Sinkronisasi data sedang berjalan..."):
+        with st.spinner("Sinkronisasi data sedang berjalan... Sabar bray!"):
             try:
                 def to_str(x):
                     try: return str(int(float(x)))
@@ -111,23 +111,19 @@ if proses_btn:
                 
                 # FUNGSI PEMBACA SMART (Nyari judul kolom otomatis)
                 def read_file_smart(uploaded_file):
-                    # Baca filenya polosan dulu tanpa ngatur header
                     if uploaded_file.name.lower().endswith('.csv'):
                         df = pd.read_csv(uploaded_file, sep=None, engine='python', header=None)
                     else:
                         df = pd.read_excel(uploaded_file, header=None)
                     
-                    # Scanning baris demi baris nyari yang ada tulisan 'ebib'
                     header_idx = 0
-                    for i in range(min(15, len(df))): # Cek maksimal 15 baris pertama
+                    for i in range(min(15, len(df))):
                         row_vals = df.iloc[i].astype(str).str.lower().tolist()
                         if any('ebib' in str(v).strip() for v in row_vals):
                             header_idx = i
                             break
                             
-                    # Tetapkan baris yang ketemu sebagai judul kolom resmi
                     df.columns = df.iloc[header_idx]
-                    # Hapus baris judul dan baris sampah di atasnya
                     df = df.iloc[header_idx+1:].reset_index(drop=True)
                     return df
 
@@ -146,7 +142,7 @@ if proses_btn:
                             if kw in col: return col
                     raise KeyError(f"Waduh bray, kolom '{keywords[0]}' ga ketemu. Kolom yang ada di file lu: {list(df.columns)}")
 
-                # --- 2. BACA DATA MENTAH (Sekarang gak butuh hardcode header_row lagi) ---
+                # --- 2. BACA DATA MENTAH ---
                 df_active = clean_cols(read_file_smart(file_active))
                 df_kcal = clean_cols(read_file_smart(file_kcal))
                 df_time = clean_cols(read_file_smart(file_time))
@@ -176,7 +172,8 @@ if proses_btn:
                 c_l_stat = get_col(df_league, 'status')
                 c_l_kcal = get_col(df_league, 'total kcal', 'kcal')
                 c_l_time = get_col(df_league, 'total moving time', 'moving time')
-                c_l_score = get_col(df_league, 'total score', 'score')
+                # FIX: Nambahin 'total poin' dan 'poin' ke radar pencarian
+                c_l_score = get_col(df_league, 'total score', 'score', 'total poin', 'poin')
                 c_l_carb = get_col(df_league, 'total carbon saved', 'carbon')
 
                 league_status = {to_str(k): v for k, v in zip(df_league[c_l_ebib], df_league[c_l_stat])}
