@@ -95,7 +95,7 @@ with col2:
 
 
 # ==========================================
-# LOGIKA MESIN OTOMASI (SCANNER MATA ELANG + ANTI TYPO)
+# LOGIKA MESIN OTOMASI (SUPER RADAR ADAPTIF)
 # ==========================================
 proses_btn = st.button("Proses Sinkronisasi Data")
 
@@ -103,7 +103,7 @@ if proses_btn:
     if not all([master_file, file_active, file_kcal, file_time, file_steps, file_league, file_move, file_recharger]):
         st.error("Semua 8 file wajib diunggah sebelum memproses data.")
     else:
-        with st.spinner("Sinkronisasi data sedang berjalan... Sabar bray!"):
+        with st.spinner("Mesin adaptif sedang membaca dan menyesuaikan data... Sabar bray!"):
             try:
                 def to_str(x):
                     try: return str(int(float(x)))
@@ -127,7 +127,7 @@ if proses_btn:
                     df = df.iloc[header_idx+1:].reset_index(drop=True)
                     return df
 
-                # --- 1. RADAR PINTAR (ANTI-ERROR NAMA KOLOM) ---
+                # --- 1. SUPER RADAR PINTAR (ANTI PERUBAHAN BAHASA & TYPO) ---
                 def clean_cols(df):
                     import re
                     df.columns = df.columns.astype(str).str.strip().str.lower()
@@ -135,12 +135,14 @@ if proses_btn:
                     return df
                 
                 def get_col(df, *keywords):
+                    # 1. Cari exact match dulu (kalau ada yang pas banget)
                     for kw in keywords:
                         if kw in df.columns: return kw
+                    # 2. Cari partial match (akar kata ada di dalem string judul)
                     for col in df.columns:
                         for kw in keywords:
                             if kw in col: return col
-                    raise KeyError(f"Waduh bray, kolom '{keywords[0]}' ga ketemu. Kolom yang ada di file lu: {list(df.columns)}")
+                    raise KeyError(f"Waduh bray, kolom buat kategori '{keywords[0]}' ga ketemu. Kolom yang kebaca di file lu: {list(df.columns)}")
 
                 # --- 2. BACA DATA MENTAH ---
                 df_active = clean_cols(read_file_smart(file_active))
@@ -151,29 +153,29 @@ if proses_btn:
                 df_move = clean_cols(read_file_smart(file_move))
                 df_recharger = clean_cols(read_file_smart(file_recharger))
 
-                # Extract map
-                c_k_ebib = get_col(df_kcal, 'ebib')
-                c_k_kcal = get_col(df_kcal, 'total kcal', 'kcal')
+                # --- 3. EKSTRAKSI DATA DENGAN KATA KUNCI SUPER LENGKAP ---
+                c_k_ebib = get_col(df_kcal, 'ebib', 'id')
+                c_k_kcal = get_col(df_kcal, 'kcal', 'kalori', 'cal', 'kal')
                 kcal_map = {to_str(k): str(v).lower().replace(' kcal','') for k, v in zip(df_kcal[c_k_ebib], df_kcal[c_k_kcal])}
 
-                c_t_ebib = get_col(df_time, 'ebib')
-                c_t_time = get_col(df_time, 'total moving time', 'moving time')
+                c_t_ebib = get_col(df_time, 'ebib', 'id')
+                c_t_time = get_col(df_time, 'time', 'waktu', 'durasi', 'duration', 'menit', 'min')
                 time_map = {to_str(k): str(v).lower().replace(' min','').replace(' minutes','') for k, v in zip(df_time[c_t_ebib], df_time[c_t_time])}
 
-                c_s_ebib = get_col(df_steps, 'ebib')
-                c_s_step = get_col(df_steps, 'total steps', 'steps')
+                c_s_ebib = get_col(df_steps, 'ebib', 'id')
+                c_s_step = get_col(df_steps, 'step', 'langkah')
                 step_map = {to_str(k): v for k, v in zip(df_steps[c_s_ebib], df_steps[c_s_step])}
 
-                c_a_ebib = get_col(df_active, 'ebib')
-                c_a_act = get_col(df_active, 'active', 'status')
+                c_a_ebib = get_col(df_active, 'ebib', 'id')
+                c_a_act = get_col(df_active, 'active', 'status', 'aktif')
                 active_map = {to_str(k): v for k, v in zip(df_active[c_a_ebib], df_active[c_a_act])}
                 
-                c_l_ebib = get_col(df_league, 'ebib')
-                c_l_stat = get_col(df_league, 'status')
-                c_l_kcal = get_col(df_league, 'total kcal', 'kcal')
-                c_l_time = get_col(df_league, 'total moving time', 'moving time')
-                c_l_score = get_col(df_league, 'total score', 'score', 'total poin', 'poin')
-                c_l_carb = get_col(df_league, 'total carbon saved', 'carbon')
+                c_l_ebib = get_col(df_league, 'ebib', 'id')
+                c_l_stat = get_col(df_league, 'status', 'state')
+                c_l_kcal = get_col(df_league, 'kcal', 'kalori', 'cal', 'kal')
+                c_l_time = get_col(df_league, 'time', 'waktu', 'durasi', 'duration', 'menit', 'min')
+                c_l_score = get_col(df_league, 'score', 'skor', 'poin', 'point', 'nilai')
+                c_l_carb = get_col(df_league, 'carbon', 'karbon', 'co2')
 
                 league_status = {to_str(k): v for k, v in zip(df_league[c_l_ebib], df_league[c_l_stat])}
                 league_kcal = {to_str(k): v for k, v in zip(df_league[c_l_ebib], df_league[c_l_kcal])}
@@ -181,21 +183,21 @@ if proses_btn:
                 league_score = {to_str(k): v for k, v in zip(df_league[c_l_ebib], df_league[c_l_score])}
                 league_carbon = {to_str(k): str(v).lower().replace(' gco₂e','') for k, v in zip(df_league[c_l_ebib], df_league[c_l_carb])}
 
-                c_m_ebib = get_col(df_move, 'ebib')
-                c_m_dist = get_col(df_move, 'distances', 'jarak')
-                c_m_stat = get_col(df_move, 'status')
+                c_m_ebib = get_col(df_move, 'ebib', 'id')
+                c_m_dist = get_col(df_move, 'dist', 'jarak', 'km', 'meter')
+                c_m_stat = get_col(df_move, 'status', 'state')
                 move_dist = {to_str(k): str(v).lower().replace(' min','') for k, v in zip(df_move[c_m_ebib], df_move[c_m_dist])}
                 move_status = {to_str(k): v for k, v in zip(df_move[c_m_ebib], df_move[c_m_stat])}
 
-                c_r_ebib = get_col(df_recharger, 'ebib')
-                c_r_dist = get_col(df_recharger, 'distances', 'jarak')
-                c_r_stat = get_col(df_recharger, 'status')
+                c_r_ebib = get_col(df_recharger, 'ebib', 'id')
+                c_r_dist = get_col(df_recharger, 'dist', 'jarak', 'poin', 'point')
+                c_r_stat = get_col(df_recharger, 'status', 'state')
                 rech_dist = {to_str(k): str(v).lower().replace(' poin','') for k, v in zip(df_recharger[c_r_ebib], df_recharger[c_r_dist])}
                 rech_status = {to_str(k): v for k, v in zip(df_recharger[c_r_ebib], df_recharger[c_r_stat])}
 
                 wb = openpyxl.load_workbook(master_file)
                 
-                # --- 3. UPDATE SHEET DATA RINCIAN ---
+                # --- 4. UPDATE SHEET DATA RINCIAN ---
                 ws_kinerja = wb['Monit Kinerja']
                 for row in range(5, ws_kinerja.max_row + 1):
                     ebib_val = ws_kinerja.cell(row=row, column=10).value
@@ -237,7 +239,7 @@ if proses_btn:
                     if ebib_str in rech_dist: ws_rech.cell(row=row, column=10).value = rech_dist[ebib_str]
                     if ebib_str in rech_status: ws_rech.cell(row=row, column=11).value = rech_status[ebib_str]
 
-                # --- 4. HITUNG SEMUA TABEL REKAP OTOMATIS ---
+                # --- 5. HITUNG SEMUA TABEL REKAP OTOMATIS ---
                 ws_rekap = wb['All Rekap']
 
                 # A. KINERJA
@@ -246,7 +248,6 @@ if proses_btn:
                     if row[5]: data_k.append({'UNIT': row[5], 'Kcal': row[10] or 0, 'Time': row[11] or 0, 'Active': row[13]})
                 df_k = pd.DataFrame(data_k)
                 
-                # Saringan Angka: Paksa ubah teks error jadi angka 0 biar bisa di-mean
                 df_k['Kcal'] = pd.to_numeric(df_k['Kcal'], errors='coerce').fillna(0)
                 df_k['Time'] = pd.to_numeric(df_k['Time'], errors='coerce').fillna(0)
 
@@ -281,7 +282,6 @@ if proses_btn:
                         data_l.append({'UNIT': row[4], 'Kalori_pct': kal_pct, 'Waktu_pct': wak_pct})
                 df_l = pd.DataFrame(data_l)
                 
-                # Saringan Angka League
                 df_l['Kalori_pct'] = pd.to_numeric(df_l['Kalori_pct'], errors='coerce').fillna(0)
                 df_l['Waktu_pct'] = pd.to_numeric(df_l['Waktu_pct'], errors='coerce').fillna(0)
 
@@ -444,7 +444,7 @@ if proses_btn:
                 
                 st.success("✅ Sinkronisasi Selesai!")
                 st.download_button(
-                    label="Download Excel",
+                    label="Download Excel Hasil Rekap",
                     data=output,
                     file_name="Monitoring_PLN_Wellness_UPDATED_Final.xlsx",
                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
