@@ -95,7 +95,7 @@ with col2:
 
 
 # ==========================================
-# LOGIKA MESIN OTOMASI (KEBAL ERROR HURUF BESAR/KECIL)
+# LOGIKA MESIN OTOMASI (RADAR PINTAR / FUZZY FINDER)
 # ==========================================
 proses_btn = st.button("Proses Sinkronisasi Data")
 
@@ -109,12 +109,26 @@ if proses_btn:
                     try: return str(int(float(x)))
                     except: return str(x).strip()
 
-                # FUNGSI ANTIBODI: Nyeragamin nama kolom jadi huruf kecil dan tanpa spasi liar
+                # --- 1. RADAR PINTAR (ANTI-ERROR NAMA KOLOM) ---
                 def clean_cols(df):
+                    # Bikin huruf kecil semua, ilangin spasi depan-belakang, dan normalkan spasi ganda
+                    import re
                     df.columns = df.columns.astype(str).str.strip().str.lower()
+                    df.columns = [re.sub(r'\s+', ' ', col) for col in df.columns]
                     return df
+                
+                def get_col(df, *keywords):
+                    # Cari exact match dulu
+                    for kw in keywords:
+                        if kw in df.columns: return kw
+                    # Kalau ga ada, cari sebagian kata (partial match)
+                    for col in df.columns:
+                        for kw in keywords:
+                            if kw in col: return col
+                    # Kalau tetep ga nemu, baru tampilin error yang jelas
+                    raise KeyError(f"Waduh bray, kolom '{keywords[0]}' ga ketemu. Kolom yang ada di file lu: {list(df.columns)}")
 
-                # --- BACA DATA MENTAH DENGAN ANTIBODI ---
+                # --- 2. BACA DATA MENTAH DENGAN RADAR ---
                 df_active = clean_cols(pd.read_excel(file_active))
                 df_kcal = clean_cols(pd.read_excel(file_kcal, header=1))
                 df_time = clean_cols(pd.read_excel(file_time, header=1))
@@ -123,27 +137,51 @@ if proses_btn:
                 df_move = clean_cols(pd.read_excel(file_move, header=1))
                 df_recharger = clean_cols(pd.read_excel(file_recharger, header=1))
 
-                # Extract map dengan nama kolom yang udah di-huruf-kecilin semua
-                kcal_map = {to_str(k): str(v).lower().replace(' kcal','') for k, v in zip(df_kcal['ebib'], df_kcal['total kcal'])}
-                time_map = {to_str(k): str(v).lower().replace(' min','').replace(' minutes','') for k, v in zip(df_time['ebib'], df_time['total moving time'])}
-                step_map = {to_str(k): v for k, v in zip(df_steps['ebib'], df_steps['total steps'])}
-                active_map = {to_str(k): v for k, v in zip(df_active['ebib'], df_active['active'])}
+                # Extract map dengan nama kolom yang udah dicarikan otomatis
+                c_k_ebib = get_col(df_kcal, 'ebib')
+                c_k_kcal = get_col(df_kcal, 'total kcal', 'kcal')
+                kcal_map = {to_str(k): str(v).lower().replace(' kcal','') for k, v in zip(df_kcal[c_k_ebib], df_kcal[c_k_kcal])}
+
+                c_t_ebib = get_col(df_time, 'ebib')
+                c_t_time = get_col(df_time, 'total moving time', 'moving time')
+                time_map = {to_str(k): str(v).lower().replace(' min','').replace(' minutes','') for k, v in zip(df_time[c_t_ebib], df_time[c_t_time])}
+
+                c_s_ebib = get_col(df_steps, 'ebib')
+                c_s_step = get_col(df_steps, 'total steps', 'steps')
+                step_map = {to_str(k): v for k, v in zip(df_steps[c_s_ebib], df_steps[c_s_step])}
+
+                c_a_ebib = get_col(df_active, 'ebib')
+                c_a_act = get_col(df_active, 'active', 'status')
+                active_map = {to_str(k): v for k, v in zip(df_active[c_a_ebib], df_active[c_a_act])}
                 
-                league_status = {to_str(k): v for k, v in zip(df_league['ebib'], df_league['status'])}
-                league_kcal = {to_str(k): v for k, v in zip(df_league['ebib'], df_league['total kcal'])}
-                league_time = {to_str(k): v for k, v in zip(df_league['ebib'], df_league['total moving time'])}
-                league_score = {to_str(k): v for k, v in zip(df_league['ebib'], df_league['total score'])}
-                league_carbon = {to_str(k): str(v).lower().replace(' gco₂e','') for k, v in zip(df_league['ebib'], df_league['total carbon saved'])}
+                c_l_ebib = get_col(df_league, 'ebib')
+                c_l_stat = get_col(df_league, 'status')
+                c_l_kcal = get_col(df_league, 'total kcal', 'kcal')
+                c_l_time = get_col(df_league, 'total moving time', 'moving time')
+                c_l_score = get_col(df_league, 'total score', 'score')
+                c_l_carb = get_col(df_league, 'total carbon saved', 'carbon')
 
-                move_dist = {to_str(k): str(v).lower().replace(' min','') for k, v in zip(df_move['ebib'], df_move['distances'])}
-                move_status = {to_str(k): v for k, v in zip(df_move['ebib'], df_move['status'])}
+                league_status = {to_str(k): v for k, v in zip(df_league[c_l_ebib], df_league[c_l_stat])}
+                league_kcal = {to_str(k): v for k, v in zip(df_league[c_l_ebib], df_league[c_l_kcal])}
+                league_time = {to_str(k): v for k, v in zip(df_league[c_l_ebib], df_league[c_l_time])}
+                league_score = {to_str(k): v for k, v in zip(df_league[c_l_ebib], df_league[c_l_score])}
+                league_carbon = {to_str(k): str(v).lower().replace(' gco₂e','') for k, v in zip(df_league[c_l_ebib], df_league[c_l_carb])}
 
-                rech_dist = {to_str(k): str(v).lower().replace(' poin','') for k, v in zip(df_recharger['ebib'], df_recharger['distances'])}
-                rech_status = {to_str(k): v for k, v in zip(df_recharger['ebib'], df_recharger['status'])}
+                c_m_ebib = get_col(df_move, 'ebib')
+                c_m_dist = get_col(df_move, 'distances', 'jarak')
+                c_m_stat = get_col(df_move, 'status')
+                move_dist = {to_str(k): str(v).lower().replace(' min','') for k, v in zip(df_move[c_m_ebib], df_move[c_m_dist])}
+                move_status = {to_str(k): v for k, v in zip(df_move[c_m_ebib], df_move[c_m_stat])}
+
+                c_r_ebib = get_col(df_recharger, 'ebib')
+                c_r_dist = get_col(df_recharger, 'distances', 'jarak')
+                c_r_stat = get_col(df_recharger, 'status')
+                rech_dist = {to_str(k): str(v).lower().replace(' poin','') for k, v in zip(df_recharger[c_r_ebib], df_recharger[c_r_dist])}
+                rech_status = {to_str(k): v for k, v in zip(df_recharger[c_r_ebib], df_recharger[c_r_stat])}
 
                 wb = openpyxl.load_workbook(master_file)
                 
-                # --- 1. UPDATE SHEET DATA RINCIAN ---
+                # --- 3. UPDATE SHEET DATA RINCIAN ---
                 ws_kinerja = wb['Monit Kinerja']
                 for row in range(5, ws_kinerja.max_row + 1):
                     ebib_val = ws_kinerja.cell(row=row, column=10).value
@@ -185,8 +223,7 @@ if proses_btn:
                     if ebib_str in rech_dist: ws_rech.cell(row=row, column=10).value = rech_dist[ebib_str]
                     if ebib_str in rech_status: ws_rech.cell(row=row, column=11).value = rech_status[ebib_str]
 
-
-                # --- 2. HITUNG SEMUA TABEL REKAP OTOMATIS ---
+                # --- 4. HITUNG SEMUA TABEL REKAP OTOMATIS ---
                 ws_rekap = wb['All Rekap']
 
                 # A. KINERJA
@@ -376,7 +413,7 @@ if proses_btn:
                                 for col_idx in [1, 2, 4, 5, 6, 7, 10, 11]:
                                     ws_move_rekap.cell(row=target_row, column=col_idx).value = None
 
-                # --- 3. SAVE & DOWNLOAD ---
+                # --- 5. SAVE & DOWNLOAD ---
                 output = io.BytesIO()
                 wb.save(output)
                 output.seek(0)
