@@ -10,7 +10,6 @@ st.set_page_config(page_title="PLN Wellness Sync", layout="centered", page_icon=
 
 st.markdown("""
     <style>
-        /* Header yang tajam dan elegan */
         .header-container {
             border-bottom: 1px solid rgba(150, 150, 150, 0.2);
             padding-top: 2rem;
@@ -29,8 +28,6 @@ st.markdown("""
             margin-top: 0.5rem;
             font-weight: 400;
         }
-        
-        /* Styling teks sub-bab */
         h3 {
             font-size: 1.1rem !important;
             font-weight: 600 !important;
@@ -38,8 +35,6 @@ st.markdown("""
             text-transform: uppercase;
             margin-bottom: 1rem !important;
         }
-
-        /* Tombol outline artistik */
         .stButton>button {
             background-color: transparent !important;
             border: 1px solid #00A2E9 !important;
@@ -57,8 +52,6 @@ st.markdown("""
             background-color: #00A2E9 !important;
             color: white !important;
         }
-        
-        /* Footer ala signature */
         .footer-text {
             margin-top: 5rem;
             padding-top: 1rem;
@@ -87,7 +80,7 @@ st.markdown("""
 st.markdown("### 01. MASTER DATA")
 master_file = st.file_uploader("Upload Excel Master (Original)", type=["xlsx"])
 
-st.write("<br>", unsafe_allow_html=True) # Jarak aman biar markdown nggak rusak
+st.write("<br>", unsafe_allow_html=True)
 st.markdown("### 02. UPDATE MINGGUAN")
 col1, col2 = st.columns(2)
 with col1:
@@ -102,7 +95,7 @@ with col2:
 
 
 # ==========================================
-# LOGIKA MESIN OTOMASI
+# LOGIKA MESIN OTOMASI (KEBAL ERROR HURUF BESAR/KECIL)
 # ==========================================
 proses_btn = st.button("Proses Sinkronisasi Data")
 
@@ -116,31 +109,37 @@ if proses_btn:
                     try: return str(int(float(x)))
                     except: return str(x).strip()
 
-                # --- BACA DATA MENTAH ---
-                df_active = pd.read_excel(file_active)
-                df_kcal = pd.read_excel(file_kcal, header=1)
-                df_time = pd.read_excel(file_time, header=1)
-                df_steps = pd.read_excel(file_steps, header=1)
-                df_league = pd.read_excel(file_league, header=1)
-                df_move = pd.read_excel(file_move, header=1)
-                df_recharger = pd.read_excel(file_recharger, header=1)
+                # FUNGSI ANTIBODI: Nyeragamin nama kolom jadi huruf kecil dan tanpa spasi liar
+                def clean_cols(df):
+                    df.columns = df.columns.astype(str).str.strip().str.lower()
+                    return df
 
-                kcal_map = {to_str(k): str(v).lower().replace(' kcal','') for k, v in zip(df_kcal['Ebib'], df_kcal['Total kcal'])}
-                time_map = {to_str(k): str(v).lower().replace(' min','').replace(' minutes','') for k, v in zip(df_time['Ebib'], df_time['Total Moving Time'])}
-                step_map = {to_str(k): v for k, v in zip(df_steps['Ebib'], df_steps['Total Steps'])}
-                active_map = {to_str(k): v for k, v in zip(df_active['Ebib'], df_active['Active'])}
+                # --- BACA DATA MENTAH DENGAN ANTIBODI ---
+                df_active = clean_cols(pd.read_excel(file_active))
+                df_kcal = clean_cols(pd.read_excel(file_kcal, header=1))
+                df_time = clean_cols(pd.read_excel(file_time, header=1))
+                df_steps = clean_cols(pd.read_excel(file_steps, header=1))
+                df_league = clean_cols(pd.read_excel(file_league, header=1))
+                df_move = clean_cols(pd.read_excel(file_move, header=1))
+                df_recharger = clean_cols(pd.read_excel(file_recharger, header=1))
+
+                # Extract map dengan nama kolom yang udah di-huruf-kecilin semua
+                kcal_map = {to_str(k): str(v).lower().replace(' kcal','') for k, v in zip(df_kcal['ebib'], df_kcal['total kcal'])}
+                time_map = {to_str(k): str(v).lower().replace(' min','').replace(' minutes','') for k, v in zip(df_time['ebib'], df_time['total moving time'])}
+                step_map = {to_str(k): v for k, v in zip(df_steps['ebib'], df_steps['total steps'])}
+                active_map = {to_str(k): v for k, v in zip(df_active['ebib'], df_active['active'])}
                 
-                league_status = {to_str(k): v for k, v in zip(df_league['EBIB'], df_league['STATUS'])}
-                league_kcal = {to_str(k): v for k, v in zip(df_league['EBIB'], df_league['TOTAL KCAL'])}
-                league_time = {to_str(k): v for k, v in zip(df_league['EBIB'], df_league['TOTAL MOVING TIME'])}
-                league_score = {to_str(k): v for k, v in zip(df_league['EBIB'], df_league['TOTAL SCORE'])}
-                league_carbon = {to_str(k): str(v).lower().replace(' gco₂e','') for k, v in zip(df_league['EBIB'], df_league['TOTAL CARBON SAVED'])}
+                league_status = {to_str(k): v for k, v in zip(df_league['ebib'], df_league['status'])}
+                league_kcal = {to_str(k): v for k, v in zip(df_league['ebib'], df_league['total kcal'])}
+                league_time = {to_str(k): v for k, v in zip(df_league['ebib'], df_league['total moving time'])}
+                league_score = {to_str(k): v for k, v in zip(df_league['ebib'], df_league['total score'])}
+                league_carbon = {to_str(k): str(v).lower().replace(' gco₂e','') for k, v in zip(df_league['ebib'], df_league['total carbon saved'])}
 
-                move_dist = {to_str(k): str(v).lower().replace(' min','') for k, v in zip(df_move['Ebib'], df_move['Distances'])}
-                move_status = {to_str(k): v for k, v in zip(df_move['Ebib'], df_move['Status'])}
+                move_dist = {to_str(k): str(v).lower().replace(' min','') for k, v in zip(df_move['ebib'], df_move['distances'])}
+                move_status = {to_str(k): v for k, v in zip(df_move['ebib'], df_move['status'])}
 
-                rech_dist = {to_str(k): str(v).lower().replace(' poin','') for k, v in zip(df_recharger['Ebib'], df_recharger['Distances'])}
-                rech_status = {to_str(k): v for k, v in zip(df_recharger['Ebib'], df_recharger['Status'])}
+                rech_dist = {to_str(k): str(v).lower().replace(' poin','') for k, v in zip(df_recharger['ebib'], df_recharger['distances'])}
+                rech_status = {to_str(k): v for k, v in zip(df_recharger['ebib'], df_recharger['status'])}
 
                 wb = openpyxl.load_workbook(master_file)
                 
@@ -185,6 +184,7 @@ if proses_btn:
                     ebib_str = to_str(ebib_val)
                     if ebib_str in rech_dist: ws_rech.cell(row=row, column=10).value = rech_dist[ebib_str]
                     if ebib_str in rech_status: ws_rech.cell(row=row, column=11).value = rech_status[ebib_str]
+
 
                 # --- 2. HITUNG SEMUA TABEL REKAP OTOMATIS ---
                 ws_rekap = wb['All Rekap']
