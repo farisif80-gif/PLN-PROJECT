@@ -172,7 +172,6 @@ if proses_btn:
                 c_l_stat = get_col(df_league, 'status')
                 c_l_kcal = get_col(df_league, 'total kcal', 'kcal')
                 c_l_time = get_col(df_league, 'total moving time', 'moving time')
-                # FIX: Nambahin 'total poin' dan 'poin' ke radar pencarian
                 c_l_score = get_col(df_league, 'total score', 'score', 'total poin', 'poin')
                 c_l_carb = get_col(df_league, 'total carbon saved', 'carbon')
 
@@ -246,6 +245,11 @@ if proses_btn:
                 for row in ws_kinerja.iter_rows(min_row=5, values_only=True):
                     if row[5]: data_k.append({'UNIT': row[5], 'Kcal': row[10] or 0, 'Time': row[11] or 0, 'Active': row[13]})
                 df_k = pd.DataFrame(data_k)
+                
+                # Saringan Angka: Paksa ubah teks error jadi angka 0 biar bisa di-mean
+                df_k['Kcal'] = pd.to_numeric(df_k['Kcal'], errors='coerce').fillna(0)
+                df_k['Time'] = pd.to_numeric(df_k['Time'], errors='coerce').fillna(0)
+
                 rkp_k = df_k.groupby('UNIT').agg(
                     Total_Pegawai=('UNIT', 'count'), AVG_Kalori=('Kcal', 'mean'), AVG_Time=('Time', 'mean'),
                     Active=('Active', lambda x: (x == 'Active').sum()), Inactive=('Active', lambda x: (x == 'Inactive').sum())
@@ -276,7 +280,12 @@ if proses_btn:
                         wak_pct = row[17] if isinstance(row[17], (int, float)) else 0
                         data_l.append({'UNIT': row[4], 'Kalori_pct': kal_pct, 'Waktu_pct': wak_pct})
                 df_l = pd.DataFrame(data_l)
-                rkp_l = df_l.groupby('UNIT').mean().reset_index()
+                
+                # Saringan Angka League
+                df_l['Kalori_pct'] = pd.to_numeric(df_l['Kalori_pct'], errors='coerce').fillna(0)
+                df_l['Waktu_pct'] = pd.to_numeric(df_l['Waktu_pct'], errors='coerce').fillna(0)
+
+                rkp_l = df_l.groupby('UNIT').mean(numeric_only=True).reset_index()
                 rkp_l_dict = rkp_l.set_index('UNIT').to_dict('index')
 
                 for row in range(23, 32):
