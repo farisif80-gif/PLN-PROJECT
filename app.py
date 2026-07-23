@@ -78,24 +78,24 @@ st.markdown("""
 # FORM UPLOAD DATA
 # ==========================================
 st.markdown("### 01. MASTER DATA")
-master_file = st.file_uploader("Upload Excel Master (Original)", type=["xlsx"])
+master_file = st.file_uploader("Upload Excel Master (Wajib .xlsx)", type=["xlsx"])
 
 st.write("<br>", unsafe_allow_html=True)
-st.markdown("### 02. UPDATE MINGGUAN")
+st.markdown("### 02. UPDATE MINGGUAN (Bebas XLSX/CSV)")
 col1, col2 = st.columns(2)
 with col1:
-    file_active = st.file_uploader("active inactive.xlsx", type=["xlsx"])
-    file_kcal = st.file_uploader("Kcal.xlsx", type=["xlsx"])
-    file_time = st.file_uploader("Moving time.xlsx", type=["xlsx"])
-    file_steps = st.file_uploader("Steps.xlsx", type=["xlsx"])
+    file_active = st.file_uploader("active inactive", type=["xlsx", "csv"])
+    file_kcal = st.file_uploader("Kcal", type=["xlsx", "csv"])
+    file_time = st.file_uploader("Moving time", type=["xlsx", "csv"])
+    file_steps = st.file_uploader("Steps", type=["xlsx", "csv"])
 with col2:
-    file_league = st.file_uploader("league.xlsx", type=["xlsx"])
-    file_move = st.file_uploader("move+.xlsx", type=["xlsx"])
-    file_recharger = st.file_uploader("recharger move.xlsx", type=["xlsx"])
+    file_league = st.file_uploader("league", type=["xlsx", "csv"])
+    file_move = st.file_uploader("move+", type=["xlsx", "csv"])
+    file_recharger = st.file_uploader("recharger move", type=["xlsx", "csv"])
 
 
 # ==========================================
-# LOGIKA MESIN OTOMASI (RADAR PINTAR / FUZZY FINDER)
+# LOGIKA MESIN OTOMASI
 # ==========================================
 proses_btn = st.button("Proses Sinkronisasi Data")
 
@@ -108,36 +108,40 @@ if proses_btn:
                 def to_str(x):
                     try: return str(int(float(x)))
                     except: return str(x).strip()
+                
+                # FUNGSI PEMBACA MULTI-FORMAT (CSV/XLSX)
+                def read_data(uploaded_file, header_row):
+                    if uploaded_file.name.lower().endswith('.csv'):
+                        # Pakai engine python biar deteksi titik koma atau koma jalan otomatis
+                        return pd.read_csv(uploaded_file, header=header_row, sep=None, engine='python')
+                    else:
+                        return pd.read_excel(uploaded_file, header=header_row)
 
                 # --- 1. RADAR PINTAR (ANTI-ERROR NAMA KOLOM) ---
                 def clean_cols(df):
-                    # Bikin huruf kecil semua, ilangin spasi depan-belakang, dan normalkan spasi ganda
                     import re
                     df.columns = df.columns.astype(str).str.strip().str.lower()
                     df.columns = [re.sub(r'\s+', ' ', col) for col in df.columns]
                     return df
                 
                 def get_col(df, *keywords):
-                    # Cari exact match dulu
                     for kw in keywords:
                         if kw in df.columns: return kw
-                    # Kalau ga ada, cari sebagian kata (partial match)
                     for col in df.columns:
                         for kw in keywords:
                             if kw in col: return col
-                    # Kalau tetep ga nemu, baru tampilin error yang jelas
                     raise KeyError(f"Waduh bray, kolom '{keywords[0]}' ga ketemu. Kolom yang ada di file lu: {list(df.columns)}")
 
-                # --- 2. BACA DATA MENTAH DENGAN RADAR ---
-                df_active = clean_cols(pd.read_excel(file_active))
-                df_kcal = clean_cols(pd.read_excel(file_kcal, header=1))
-                df_time = clean_cols(pd.read_excel(file_time, header=1))
-                df_steps = clean_cols(pd.read_excel(file_steps, header=1))
-                df_league = clean_cols(pd.read_excel(file_league, header=1))
-                df_move = clean_cols(pd.read_excel(file_move, header=1))
-                df_recharger = clean_cols(pd.read_excel(file_recharger, header=1))
+                # --- 2. BACA DATA MENTAH DENGAN MESIN PEMBACA BARU ---
+                df_active = clean_cols(read_data(file_active, header_row=0))
+                df_kcal = clean_cols(read_data(file_kcal, header_row=1))
+                df_time = clean_cols(read_data(file_time, header_row=1))
+                df_steps = clean_cols(read_data(file_steps, header_row=1))
+                df_league = clean_cols(read_data(file_league, header_row=1))
+                df_move = clean_cols(read_data(file_move, header_row=1))
+                df_recharger = clean_cols(read_data(file_recharger, header_row=1))
 
-                # Extract map dengan nama kolom yang udah dicarikan otomatis
+                # Extract map
                 c_k_ebib = get_col(df_kcal, 'ebib')
                 c_k_kcal = get_col(df_kcal, 'total kcal', 'kcal')
                 kcal_map = {to_str(k): str(v).lower().replace(' kcal','') for k, v in zip(df_kcal[c_k_ebib], df_kcal[c_k_kcal])}
